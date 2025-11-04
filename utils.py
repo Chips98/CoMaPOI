@@ -353,6 +353,53 @@ def create_prompt_json(args, sample):
 
     return user_id, json.dumps(prompt), label
 
+
+def access_poi_info(args, poi_id: int) -> tuple:
+    """
+    根据提供的 POI ID 读取 CSV 文件并返回对应的 category, lat, lon 信息。
+
+    Args:
+        args: 包含文件路径的参数。
+        poi_id (int): 要查找的 POI ID。
+
+    Returns:
+        tuple: 包含 POI ID, category, lat, lon 的元组。
+               如果未找到，返回 (poi_id, "Unknown", 0.0, 0.0)。
+    """
+    file_path = f"dataset/{args.dataset}/{args.dataset}_poi_info.csv"
+
+    try:
+        # 读取CSV文件
+        df = pd.read_csv(file_path)  # 确保文件路径正确
+    except FileNotFoundError:
+        logging.error(f"Error: 文件未找到，请检查路径 {file_path}。")
+        # 返回默认值
+        return int(poi_id), "Unknown", 0.0, 0.0
+    except Exception as e:
+        logging.error(f"Error: 读取文件 {file_path} 失败，错误信息: {e}")
+        return int(poi_id), "Unknown", 0.0, 0.0
+
+    try:
+        # 查找指定 POI ID 的行
+        row = df[df["poi_id"] == poi_id]
+
+        # 如果找到对应行，则返回 POI 信息
+        if not row.empty:
+            category = row.iloc[0]["category"]
+            lat = float(row.iloc[0]["lat"])  # 转换为 float 类型
+            lon = float(row.iloc[0]["lon"])  # 转换为 float 类型
+            return int(poi_id), category, lat, lon
+        else:
+            # 未找到时记录日志并返回默认值
+            logging.warning(f"POI ID {poi_id} 未找到。")
+            return int(poi_id), "Unknown", 0.0, 0.0
+    except KeyError as e:
+        logging.error(f"Error: 缺少必要字段，错误信息: {e}")
+        return int(poi_id), "Unknown", 0.0, 0.0
+    except Exception as e:
+        logging.error(f"Error: 检索 POI 信息时发生未知错误，错误信息: {e}")
+        return int(poi_id), "Unknown", 0.0, 0.0
+        
 def create_prompt_ori(args, sample):
     """
     Create an original format prompt for POI prediction.
